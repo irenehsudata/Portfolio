@@ -1,8 +1,14 @@
 from enum import Enum
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from pathlib import Path
+from fastapi.responses import FileResponse
 
-app = FastAPI(title="title", description="description", version="0.1.0")
+app = FastAPI(
+    title="Final Fantasy VII API",
+    description="This is the FF7 characters wikipedia API",
+    version="0.1.0",
+)
 
 
 class Category(Enum):
@@ -22,7 +28,11 @@ class Character(BaseModel):
 
 characters = {
     0: Character(
-        name="Cloud Strife", age=21, home="Nibelheim", id=0, category=Category.PLAYER
+        name="Cloud Strife",
+        age=21,
+        home="Nibelheim",
+        id=0,
+        category=Category.PLAYER,
     ),
     1: Character(
         name="Tifa Lockhart", age=20, home="Nibelheim", id=1, category=Category.PLAYER
@@ -65,11 +75,13 @@ characters = {
 }
 
 
+# get all characters' info.
 @app.get("/")
 def index() -> dict[str, dict[int, Character]]:
     return {"characters": characters}
 
 
+# get character by id
 @app.get("/characters/{character_id}")
 def query_character_by_id(character_id: int) -> Character:
     if character_id not in characters:
@@ -110,14 +122,65 @@ def query_character_by_parameter(
     }
 
 
-#
-from pathlib import Path
-from fastapi.responses import FileResponse
+# get images by character's id
+@app.get("/characters/{character_id}/image")
+def get_character_image_by_id(character_id: int):
+    if character_id not in characters:
+        raise HTTPException(
+            status_code=404, detail=f"Character with {character_id=} does not exist."
+        )
+    character = characters[character_id]
+    image_path = f"{character.name}.jpeg"  # Assuming images are stored with the character name as the file name
+    if not Path(image_path).is_file():
+        return {"error": "Image file not found for this character"}
+    return FileResponse(image_path, media_type="image/jpeg")
 
 
-@app.get("/get_image")
-async def get_image():
-    image_path = Path("gfglogo.jpg")
-    if not image_path.is_file():
-        return {"error": "Image not found on the server"}
-    return FileResponse(image_path)
+# add character
+@app.post("/")
+def add_item(character: Character) -> dict[str, Character]:
+
+    if character.id in characters:
+        HTTPException(
+            status_code=400, detail=f"Character with {character.id=} already exists."
+        )
+
+    characters[character.id] = character
+    return {"added": character}
+
+
+# update character info.
+@app.put("/update/{character_id}")
+def update(
+    character_id: int,
+    name: str | None = None,
+    age: int | None = None,
+    home: str | None = None,
+) -> dict[str, Character]:
+
+    if character_id not in characters:
+        HTTPException(
+            status_code=404, detail=f"Character with {character_id=} does not exist."
+        )
+    if all(info is None for info in (name, age, home)):
+        raise HTTPException(
+            status_code=400, detail="No parameters provided for update."
+        )
+
+    character = characters[character_id]
+    if name is not None:
+        character.name = name
+    if age is not None:
+        character.age = age
+    if home is not None:
+        character.home = home
+
+    return {"updated": character}
+
+
+# @app.get("/get_image")
+# def get_image():
+#     image_path = Path("Cloud_Strife_from_FFVII_Rebirth_promo_render.jpeg")
+#     if not image_path.is_file():
+#         return {"error": "Image not found on the server"}
+#     return FileResponse(image_path)
