@@ -26,7 +26,7 @@ selection = st.sidebar.radio("Go to", list(PAGES.keys()))
 page = PAGES[selection]
 
 # Data loading functions
-@st.cache
+@st.cache_data
 def match_postcodes(postcode):
     """
     Function that takes a postcode and build a polygon based on the coordinates of the area around it.
@@ -46,7 +46,7 @@ def match_postcodes(postcode):
         raise Exception
     return df, polygon
 
-@st.cache(ttl=86400)
+@st.cache_data
 def fetch_dates():
     """
     Function that fetches the date range of the available data
@@ -59,7 +59,7 @@ def fetch_dates():
         df = "Data pull failed, please refresh the page"
     return df
 
-@st.cache
+@st.cache_data
 def fetch_force_data(coordinates):
     """
     Function to match the postcodes coordinates to the police force of the area and the relevant people in it.
